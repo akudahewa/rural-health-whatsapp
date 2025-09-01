@@ -17,6 +17,9 @@ app.get('/webhook', (req, res) => {
     res.sendStatus(403);
   }
 });
+app.get('/', (req, res) => {
+  res.send('Hello World');
+});
 
 // Receive WhatsApp Messages
 app.post('/webhook', async (req, res) => {
