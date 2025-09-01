@@ -27,37 +27,35 @@ const sinhala = {
   error: "❌ දෝෂයක් ඇති විය. නැවත උත්සාහ කරන්න."
 };
 
-// 🌐 Tamil Messages
-const tamil = {
-  welcome: "🏥 வணக்கம்! 'டாக்டர் புக்' என டைப் செய்க",
-  choose_clinic: "📍 மருத்துவமனையைத் தேர்வு செய்க:",
-  choose_doctor: "👨‍⚕️ மருத்துவரைத் தேர்வு செய்க:",
-  choose_slot: "🕒 நேரத்தைத் தேர்வு செய்க:",
-  confirm: "📄 உங்கள் பதிவு உறுதி செய்யப்பட்டதா?",
-  confirmed: "✅ பதிவு செய்யப்பட்டது!",
-  error: "❌ பிழை. மீண்டும் முயற்சிக்கவும்."
-};
-
-if (text.includes('symptoms') || text.includes('රෝග ಅවස්ථාව')) {
-    await sendMsg(from, "ඔබට කුමන රෝග ලක්ෂණ දක්නට ලැබේද? (උදා: උණ, කැස්ස, බර අඩුවීම)");
-    userState[from] = { step: 'awaiting_symptoms' };
-  }
-  
-  if (state.step === 'awaiting_symptoms') {
-    // Simple rule-based AI (can upgrade to ML later)
-    let reply = "ඔබට ";
-    if (text.includes('උණ') && text.includes('කැස්ස')) reply += "ඩෙන්ගු හෝ ඉන්ෆිලුඑන්සා විය හැකිය. වෛද්‍ය ගුරු කරන්න.";
-    else if (text.includes('වමනය')) reply += "ජල දැල්වීම වළක්වා ගැනීමට ද්‍රව බොන්න. වෛද්‍ය ගුරු කරන්න.";
-    else reply += "සාමාන්‍ය රෝගයක් ඇති විය හැක. වෛද්‍ය ගුරු කරන්න.";
-  
-    await sendMsg(from, reply);
-    userState[from] = { step: 'start' };
-  }
-
 exports.handleUserMessage = async (from, text) => {
   const state = userState[from] || { step: 'start' };
 
   try {
+    // 🌿 AI Symptom Checker - Always check first
+    if (text.includes('symptoms') || text.includes('රෝග අවස්ථාව') || text.includes('symptom') || text.includes('අවස්ථාව')) {
+      await sendMsg(from, "ඔබට කුමන රෝග ලක්ෂණ දක්නට ලැබේද? (උදා: උණ, කැස්ස, වමනය)");
+      userState[from] = { step: 'awaiting_symptoms' };
+      return;
+    }
+
+    // If user is in symptom flow
+    if (state.step === 'awaiting_symptoms') {
+      let reply = "ඔබට ";
+      if (text.includes('උණ') && text.includes('කැස්ස')) {
+        reply += "ඩෙන්ගු හෝ ඉන්ෆිලුඑන්සා විය හැකිය. වෛද්‍ය ගුරු කරන්න.";
+      } else if (text.includes('වමනය') || text.includes('වමන')) {
+        reply += "ජල දැල්වීම වළක්වා ගැනීමට ද්‍රව බොන්න. වෛද්‍ය ගුරු කරන්න.";
+      } else if (text.includes('වේදනාව') || text.includes('පිළිකා')) {
+        reply += "කාලය අති වැදගත්ය. වහාම වෛද්‍ය ගුරු කරන්න.";
+      } else {
+        reply += "සාමාන්‍ය රෝගයක් ඇති විය හැක. වෛද්‍ය ගුරු කරන්න.";
+      }
+      await sendMsg(from, reply);
+      userState[from] = { step: 'start' }; // Reset
+      return;
+    }
+
+    // ✅ Normal Booking Flow
     if (text.includes('book doctor') || text.includes('වෛද්‍ය ගුරු') || text.includes('டாக்டர் புக்') || text === '1') {
       state.step = 'choose_clinic';
       let msg = sinhala.choose_clinic + "\n";
@@ -116,7 +114,7 @@ exports.handleUserMessage = async (from, text) => {
       return;
     }
 
-    if (state.step === 'confirm' && text === 'yes') {
+    if (state.step === 'confirm' && text.toLowerCase() === 'yes') {
       const doctor = doctors.find(d => d.id === state.doctorId);
       const bookingData = {
         patient_phone: from,
@@ -133,11 +131,14 @@ exports.handleUserMessage = async (from, text) => {
       await sendMsg(from, `${sinhala.confirmed}\n${doctor.name}\n${clinic.name}\n${state.date} ${state.time}\nමෙම පණිවිඩය ප්‍රතිශෝධනයේදී පෙන්වන්න.`);
 
       delete userState[from];
-    } else {
-      await sendMsg(from, sinhala.welcome);
+      return;
     }
+
+    // Default fallback
+    await sendMsg(from, sinhala.welcome);
+
   } catch (err) {
     await sendMsg(from, sinhala.error);
-    console.error(err);
+    console.error('Bot error:', err);
   }
 };
