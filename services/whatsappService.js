@@ -16,7 +16,7 @@ exports.sendMsg = async (to, body) => {
     };
 
     const headers = {
-      'Authorization': `Bearer ${process.env.ACCESS_TOKEN}`,
+      'Authorization': `Bearer EAALP8uZCb17ABPf2WPGKrar40H1yJ59CObJc0eIpvuNZCW43Kcu5wlDuGx1aHOo51xt6htSWjxvx9SOM9a18Ox2bcPBImSZBEXlCNHWcv8PETh58NwgOPfonEYmkGS7EGibue8WcdboG02VzeOMVGxWNYieFpZAdRFxoJW0s5YFG62bX1kw1dpJP4MvKAGYZBxQZDZD`,
       'Content-Type': 'application/json'
     };
 
