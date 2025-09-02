@@ -23,17 +23,60 @@ app.get('/', (req, res) => {
 });
 
 // Receive WhatsApp Messages
+// app.post('/webhook', async (req, res) => {
+//   console.log('Received message .......');
+//   console.log(req.body);
+//   const message = req.body.entry[0].changes[0].value.messages[0];
+//   console.log(message);
+//   if (!message) return res.sendStatus(200);
+
+//   const from = message.from;
+//   const text = message.text?.body?.toLowerCase();
+
+//   await handleUserMessage(from, text);
+//   res.sendStatus(200);
+// });
+
 app.post('/webhook', async (req, res) => {
-  console.log('Received message .......');
-  console.log(req.body);
-  const message = req.body.entry[0].changes[0].value.messages[0];
-  console.log(message);
-  if (!message) return res.sendStatus(200);
+  console.log('📩 Received webhook:', JSON.stringify(req.body, null, 2));
+
+  // Extract nested data safely
+  const entry = req.body.entry?.[0];
+  const change = entry?.changes?.[0];
+  const value = change?.value;
+
+  if (!value) {
+    console.log('❌ No value in webhook');
+    return res.sendStatus(200);
+  }
+
+  const message = value.messages?.[0];
+  if (!message) {
+    console.log('❌ No message found');
+    return res.sendStatus(200);
+  }
+
+  if (message.type !== 'text') {
+    console.log('❌ Not a text message');
+    return res.sendStatus(200);
+  }
 
   const from = message.from;
   const text = message.text?.body?.toLowerCase();
 
-  await handleUserMessage(from, text);
+  if (!text) {
+    console.log('❌ Message has no text');
+    return res.sendStatus(200);
+  }
+
+  console.log(`💬 From ${from}: ${text}`);
+
+  try {
+    await handleUserMessage(from, text);
+  } catch (err) {
+    console.error('❌ Error handling message:', err);
+  }
+
   res.sendStatus(200);
 });
 
