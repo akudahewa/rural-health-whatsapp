@@ -7,7 +7,7 @@ exports.sendMsg = async (to, body) => {
     const recipient = to.replace('+', '').replace(/^0+/, '');
 
     const url = `${process.env.WHATSAPP_API_URL}/${process.env.PHONE_NUMBER_ID}/messages`;
-
+    console.log("url ......... "+url);
     const data = {
       messaging_product: "whatsapp",
       to: recipient,
