@@ -24,6 +24,7 @@ app.get('/', (req, res) => {
 
 // Receive WhatsApp Messages
 app.post('/webhook', async (req, res) => {
+  console.log(req.body);
   const message = req.body.entry[0].changes[0].value.messages[0];
   console.log(message);
   if (!message) return res.sendStatus(200);
