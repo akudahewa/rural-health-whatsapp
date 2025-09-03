@@ -29,6 +29,7 @@ const sinhala = {
 
 exports.handleUserMessage = async (from, text) => {
   const state = userState[from] || { step: 'start' };
+  console.log("state ......... "+state);
 
   try {
     // 🌿 AI Symptom Checker - Always check first

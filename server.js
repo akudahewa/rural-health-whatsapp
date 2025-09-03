@@ -51,6 +51,7 @@ app.post('/webhook', async (req, res) => {
   }
 
   const message = value.messages?.[0];
+  console.log("message ......... "+message);
   if (!message) {
     console.log('❌ No message found');
     return res.sendStatus(200);
