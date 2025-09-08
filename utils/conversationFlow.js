@@ -1,145 +1,144 @@
-const { sendMsg } = require('../services/whatsappService');
-const { createBooking } = require('../services/bookingService');
 
-// 👇 Replace with your real doctor/clinic data from DB or API
-const clinics = [
-  { id: 'c1', name: 'හම්බන්තොට ප්‍රාථමික සෞඛ්‍ය මධ්‍යස්ථානය', name_en: 'Hambantota PHC' },
-  { id: 'c2', name: 'මොණරාගල ප්‍රා. සෞඛ්‍ය කේන්ද්‍රය', name_en: 'Monaragala MC' }
-];
 
-const doctors = [
-  { id: 'd1', name: 'ඩො. පෙරේරා (සාමාන්‍ය)', clinicId: 'c1', name_en: 'Dr. Perera (GP)' },
-  { id: 'd2', name: 'ඩො. සිල්වා (ළදරු)', clinicId: 'c1', name_en: 'Dr. Silva (Pediatric)' }
-];
+// utils/conversationFlow.js
+const axios = require("axios");
+const { sendMsg } = require("../services/whatsappService");
+const { createBooking } = require("../services/bookingService");
 
-const slots = ['10:00', '11:00', '14:00'];
-
+// Store per-user conversation state
 let userState = {};
 
-// 💬 Sinhala Messages
-const sinhala = {
-  welcome: "🏥 ආයුබෝවන්! 'වෛද්‍ය ගුරු' යනු ටයිප් කරන්න",
-  choose_clinic: "📍 සෞඛ්‍ය මධ්‍යස්ථානය තෝරන්න:",
-  choose_doctor: "👨‍⚕️ වෛද්‍යවරයා තෝරන්න:",
-  choose_slot: "🕒 වේලාව තෝරන්න:",
-  confirm: "📄 ඔබගේ ගැළවීම තහවුරු කරන්න?",
-  confirmed: "✅ ගැළවීම සාර්ථකයි!",
-  error: "❌ දෝෂයක් ඇති විය. නැවත උත්සාහ කරන්න."
+// Language menus
+const languages = {
+  1: { code: "si", label: "සිංහල" },
+  2: { code: "en", label: "English" },
+  3: { code: "ta", label: "தமிழ்" }
+};
+
+// Translations (system prompts)
+const prompts = {
+  en: {
+    chooseLang: "🌐 Please select your preferred language:\n1. Sinhala\n2. English\n3. Tamil",
+    chooseDoctor: "👨‍⚕️ Please choose a doctor:",
+    chooseDisp: "🏥 Please choose a dispensary:",
+    confirm: "✅ Confirm your booking?",
+    error: "❌ Invalid choice. Please try again."
+  },
+  si: {
+    chooseLang: "🌐 කරුණාකර ඔබේ භාෂාව තෝරන්න:\n1. සිංහල\n2. English\n3. தமிழ்",
+    chooseDoctor: "👨‍⚕️ වෛද්‍යවරයා තෝරන්න:",
+    chooseDisp: "🏥 රෝහල තෝරන්න:",
+    confirm: "✅ ඔබගේ වෙන්කිරීම තහවුරු කරන්න?",
+    error: "❌ වැරදි තේරීමකි. නැවත උත්සාහ කරන්න."
+  },
+  ta: {
+    chooseLang: "🌐 உங்கள் மொழியைத் தேர்ந்தெடுக்கவும்:\n1. සිංහල\n2. English\n3. தமிழ்",
+    chooseDoctor: "👨‍⚕️ மருத்துவரைத் தேர்ந்தெடுக்கவும்:",
+    chooseDisp: "🏥 மருந்தகத்தைத் தேர்ந்தெடுக்கவும்:",
+    confirm: "✅ உங்கள் முன்பதிவை உறுதிப்படுத்தவா?",
+    error: "❌ தவறான தேர்வு. மீண்டும் முயற்சிக்கவும்."
+  }
 };
 
 exports.handleUserMessage = async (from, text) => {
-  const state = userState[from] || { step: 'start' };
-  console.log("state ......... "+state);
+  let state = userState[from] || { step: "start" };
+  const lang = state.lang || "en"; // default English
 
   try {
-    // 🌿 AI Symptom Checker - Always check first
-    if (text.includes('symptoms') || text.includes('රෝග අවස්ථාව') || text.includes('symptom') || text.includes('අවස්ථාව')) {
-      await sendMsg(from, "ඔබට කුමන රෝග ලක්ෂණ දක්නට ලැබේද? (උදා: උණ, කැස්ස, වමනය)");
-      userState[from] = { step: 'awaiting_symptoms' };
-      return;
-    }
-
-    // If user is in symptom flow
-    if (state.step === 'awaiting_symptoms') {
-      let reply = "ඔබට ";
-      if (text.includes('උණ') && text.includes('කැස්ස')) {
-        reply += "ඩෙන්ගු හෝ ඉන්ෆිලුඑන්සා විය හැකිය. වෛද්‍ය ගුරු කරන්න.";
-      } else if (text.includes('වමනය') || text.includes('වමන')) {
-        reply += "ජල දැල්වීම වළක්වා ගැනීමට ද්‍රව බොන්න. වෛද්‍ය ගුරු කරන්න.";
-      } else if (text.includes('වේදනාව') || text.includes('පිළිකා')) {
-        reply += "කාලය අති වැදගත්ය. වහාම වෛද්‍ය ගුරු කරන්න.";
-      } else {
-        reply += "සාමාන්‍ය රෝගයක් ඇති විය හැක. වෛද්‍ය ගුරු කරන්න.";
-      }
-      await sendMsg(from, reply);
-      userState[from] = { step: 'start' }; // Reset
-      return;
-    }
-
-    // ✅ Normal Booking Flow
-    if (text.includes('book doctor') || text.includes('වෛද්‍ය ගුරු') || text.includes('டாக்டர் புக்') || text === '1') {
-      state.step = 'choose_clinic';
-      let msg = sinhala.choose_clinic + "\n";
-      clinics.forEach((c, i) => msg += `${i+1}. ${c.name}\n`);
-      await sendMsg(from, msg);
+    // Step 1: Start booking
+    if (text.toLowerCase() === "book doctor") {
+      state.step = "chooseLang";
       userState[from] = state;
-      return;
+      return await sendMsg(from, prompts.en.chooseLang); // show in English always
     }
 
-    if (state.step === 'choose_clinic') {
-      const idx = parseInt(text) - 1;
-      if (idx >= 0 && idx < clinics.length) {
-        state.clinicId = clinics[idx].id;
-        state.step = 'choose_doctor';
-        const availableDocs = doctors.filter(d => d.clinicId === state.clinicId);
-        let msg = sinhala.choose_doctor + "\n";
-        availableDocs.forEach((d, i) => msg += `${i+1}. ${d.name}\n`);
-        await sendMsg(from, msg);
+    // Step 2: Choose language
+    if (state.step === "chooseLang") {
+      if (languages[text]) {
+        state.lang = languages[text].code;
+        state.step = "chooseDoctor";
+
+        // Fetch doctors from API
+        const res = await axios.get(`${process.env.API_URL}/doctors`);
+        state.availableDocs = res.data;
+
+        let msg = prompts[state.lang].chooseDoctor + "\n";
+        state.availableDocs.forEach((d, i) => {
+          msg += `${i + 1}. ${d.name}\n`;
+        });
+
         userState[from] = state;
+        return await sendMsg(from, msg);
       } else {
-        await sendMsg(from, "❌ නොවැලැත්තා.");
+        return await sendMsg(from, prompts[lang].error);
       }
-      return;
     }
 
-    if (state.step === 'choose_doctor') {
+    // Step 3: Choose doctor
+    if (state.step === "chooseDoctor") {
       const idx = parseInt(text) - 1;
-      const availableDocs = doctors.filter(d => d.clinicId === state.clinicId);
-      if (idx >= 0 && idx < availableDocs.length) {
-        state.doctorId = availableDocs[idx].id;
-        state.step = 'choose_slot';
-        let msg = sinhala.choose_slot + "\n";
-        slots.forEach((s, i) => msg += `${i+1}. ${s}\n`);
-        await sendMsg(from, msg);
+      if (state.availableDocs && idx >= 0 && idx < state.availableDocs.length) {
+        const doctor = state.availableDocs[idx];
+        state.doctorId = doctor._id;
+        state.step = "chooseDisp";
+
+        // Fetch dispensaries for this doctor
+        const res = await axios.get(
+          `${process.env.API_URL}/dispensaries/doctor/${doctor._id}`
+        );
+        state.availableDisps = res.data;
+
+        let msg = prompts[state.lang].chooseDisp + "\n";
+        state.availableDisps.forEach((d, i) => {
+          msg += `${i + 1}. ${d.name}\n`;
+        });
+
         userState[from] = state;
+        return await sendMsg(from, msg);
       } else {
-        await sendMsg(from, "❌ නොවැලැත්තා.");
+        return await sendMsg(from, prompts[lang].error);
       }
-      return;
     }
 
-    if (state.step === 'choose_slot') {
+    // Step 4: Choose dispensary
+    if (state.step === "chooseDisp") {
       const idx = parseInt(text) - 1;
-      if (idx >= 0 && idx < slots.length) {
-        state.time = slots[idx];
-        state.date = new Date().toISOString().split('T')[0];
-        state.step = 'confirm';
-        const doctor = doctors.find(d => d.id === state.doctorId);
-        const clinic = clinics.find(c => c.id === state.clinicId);
-        const msg = `${sinhala.confirm}\nවෛද්‍යවරයා: ${doctor.name}\nස්ථානය: ${clinic.name}\nදිනය: ${state.date}\nවේලාව: ${state.time}\n\nYES යනු ටයිප් කර තහවුරු කරන්න.`;
-        await sendMsg(from, msg);
+      if (state.availableDisps && idx >= 0 && idx < state.availableDisps.length) {
+        const disp = state.availableDisps[idx];
+        state.dispId = disp._id;
+        state.step = "confirm";
+
+        const doctor = state.availableDocs.find(d => d._id === state.doctorId);
+
+        const msg = `${prompts[state.lang].confirm}\n\nDoctor: ${doctor.name}\nDispensary: ${disp.name}\n\nReply YES to confirm.`;
         userState[from] = state;
+        return await sendMsg(from, msg);
       } else {
-        await sendMsg(from, "❌ නොවැලැත්තා.");
+        return await sendMsg(from, prompts[lang].error);
       }
-      return;
     }
 
-    if (state.step === 'confirm' && text.toLowerCase() === 'yes') {
-      const doctor = doctors.find(d => d.id === state.doctorId);
+    // Step 5: Confirm booking
+    if (state.step === "confirm" && text.toLowerCase() === "yes") {
       const bookingData = {
         patient_phone: from,
         doctor_id: state.doctorId,
-        clinic_id: state.clinicId,
-        date: state.date,
-        time: state.time,
-        source: 'whatsapp'
+        clinic_id: state.dispId,
+        source: "whatsapp"
       };
 
       await createBooking(bookingData);
 
-      const clinic = clinics.find(c => c.id === state.clinicId);
-      await sendMsg(from, `${sinhala.confirmed}\n${doctor.name}\n${clinic.name}\n${state.date} ${state.time}\nමෙම පණිවිඩය ප්‍රතිශෝධනයේදී පෙන්වන්න.`);
-
+      await sendMsg(from, "🎉 Booking confirmed! Thank you.");
       delete userState[from];
       return;
     }
 
-    // Default fallback
-    await sendMsg(from, sinhala.welcome);
+    // Default: reset
+    return await sendMsg(from, prompts[lang].error);
 
   } catch (err) {
-    await sendMsg(from, sinhala.error);
-    console.error('Bot error:', err);
+    console.error("❌ Conversation flow error:", err);
+    await sendMsg(from, prompts[lang].error);
   }
 };

@@ -16,7 +16,7 @@ exports.sendMsg = async (to, body) => {
     };
 
     const headers = {
-      'Authorization': `Bearer EAALP8uZCb17ABPZAyu2JFP71pGFIWSdUSuY3tZA44LZCXIZCWOuI5SJrckZCkyPYobjhk5L8PyFrU5rA7YQuZCtaufo4cH6e4qhP1itAJBKXMvkzzRVGyZCSi2N7ZBHTQ1np6gQWlFFNC8t1nDBE4UiX4NiauX43TsDLFTFH6dS3UyBHRvXPU6MYIzsbFdR91d3XT1H429zp0PN9JmbmYj6Eq5ZBK4aFgajBd5neTCy2snDDMZD`,
+      'Authorization': `Bearer EAALP8uZCb17ABPWa173k2gIIgnZBIoTYa3lZCCc0VXiI6dovZCimR4Q5AQIsW77LX3vWWEwzzrxkkGHbqVO0qLiSZBYTkPoZANqN4fZB2uPAkyXEg7Yy8Frs40zeoNe9Q36FKvB7jM6wmNfHmqR5edxtzg8e32x74phEjY9mhqSAKSxtNZAxj7EdayhRmPl2SBGzoYSKA6dTKu1ZBlLeyx1K8AqJDgeTaCoUleM8j5gnx68wZD`,
       'Content-Type': 'application/json'
     };
 
