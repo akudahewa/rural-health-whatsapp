@@ -4,7 +4,7 @@ const { createBooking } = require('../services/bookingService');
 
 // 🔗 API URLs
 const TIMESLOTS_API = 'https://myclinic-server.onrender.com/api/timeslots/next-available';
-const BOOKING_API_URL = process.env.BOOKING_API_URL;
+const BOOKING_API_URL = 'https://myclinic-server.onrender.com/api/bookings';
 
 // 💬 Sinhala Messages
 const sinhala = {
